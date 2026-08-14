@@ -35,12 +35,12 @@ export function PostCard({ post, canModerate = false, onChanged }: Props) {
       await supabase.from('likes').insert({ post_id: post.id, user_id: profile.id });
       // Notify post owner
       if (post.user_id !== profile.id) {
-        await supabase.from('notifications').insert({
-          user_id: post.user_id,
-          type: 'like',
-          content: `${profile.full_name || 'Someone'} liked your post`,
-          related_id: post.id,
-        });
+        await supabase.rpc('create_notification', {
+  target_user_id: post.user_id,
+  notification_type: 'like',
+  notification_content: `${profile.full_name || 'Someone'} liked your post`,
+  notification_related_id: post.id,
+});
       }
     }
     onChanged();
@@ -73,12 +73,12 @@ export function PostCard({ post, canModerate = false, onChanged }: Props) {
     if (data) setComments((c) => [...c, data as Comment]);
     setNewComment('');
     if (post.user_id !== profile.id) {
-      await supabase.from('notifications').insert({
-        user_id: post.user_id,
-        type: 'comment',
-        content: `${profile.full_name || 'Someone'} commented on your post`,
-        related_id: post.id,
-      });
+     await supabase.rpc('create_notification', {
+  target_user_id: post.user_id,
+  notification_type: 'comment',
+  notification_content: `${profile.full_name || 'Someone'} commented on your post`,
+  notification_related_id: post.id,
+});
     }
     onChanged();
   };
