@@ -34,13 +34,24 @@ export function PostCard({ post, canModerate = false, onChanged }: Props) {
     } else {
       await supabase.from('likes').insert({ post_id: post.id, user_id: profile.id });
       // Notify post owner
-      if (post.user_id !== profile.id) {
-       const { error: notificationError } = await supabase.rpc('create_notification', {
-  target_user_id: post.user_id,
-  notification_type: 'like',
-  notification_content: `${profile.full_name || 'Someone'} liked your post`,
-  notification_related_id: post.id,
-});
+     if (post.user_id !== profile.id) {
+  console.log("LIKE CLICKED");
+  console.log("POST OWNER:", post.user_id);
+  console.log("CURRENT USER:", profile.id);
+
+  console.log("CREATING NOTIFICATION...");
+
+  const { data: notificationData, error: notificationError } =
+    await supabase.rpc('create_notification', {
+      target_user_id: post.user_id,
+      notification_type: 'like',
+      notification_content: `${profile.full_name || 'Someone'} liked your post`,
+      notification_related_id: post.id,
+    });
+
+  console.log("NOTIFICATION RESULT:", notificationData);
+  console.log("NOTIFICATION ERROR:", notificationError);
+}
 
 if (notificationError) {
   console.error('NOTIFICATION ERROR:', notificationError);
