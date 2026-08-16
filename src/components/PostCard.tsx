@@ -28,39 +28,61 @@ export function PostCard({ post, canModerate = false, onChanged }: Props) {
   const isOwner = post.user_id === profile?.id;
 
   const toggleLike = async () => {
-    if (!profile) return;
-    if (post.liked_by_me) {
-      await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', profile.id);
-    } else {
-      await supabase.from('likes').insert({ post_id: post.id, user_id: profile.id });
-      // Notify post owner
-     if (post.user_id !== profile.id) {
-  console.log("LIKE CLICKED");
-  console.log("POST OWNER:", post.user_id);
-  console.log("CURRENT USER:", profile.id);
+  if (!profile) return;
 
-  console.log("CREATING NOTIFICATION...");
+  if (post.liked_by_me) {
+    const { error } = await supabase
+      .from('likes')
+      .delete()
+      .eq('post_id', post.id)
+      .eq('user_id', profile.id);
 
-  const { data: notificationData, error: notificationError } =
-    await supabase.rpc('create_notification', {
-      target_user_id: post.user_id,
-      notification_type: 'like',
-      notification_content: `${profile.full_name || 'Someone'} liked your post`,
-      notification_related_id: post.id,
-    });
-
-  console.log("NOTIFICATION RESULT:", notificationData);
-  console.log("NOTIFICATION ERROR:", notificationError);
-}
-
-if (notificationError) {
-  console.error('NOTIFICATION ERROR:', notificationError);
-}
-      }
+    if (error) {
+      console.error('UNLIKE ERROR:', error);
     }
-    onChanged();
-  };
+  } else {
+    const { error: likeError } = await supabase
+      .from('likes')
+      .insert({
+        post_id: post.id,
+        user_id: profile.id,
+      });
 
+    if (likeError) {
+      console.error('LIKE INSERT ERROR:', likeError);
+      return;
+    }
+
+    console.log('LIKE CLICKED');
+    console.log('POST OWNER:', post.user_id);
+    console.log('CURRENT USER:', profile.id);
+
+    if (post.user_id !== profile.id) {
+      console.log('CREATING NOTIFICATION...');
+
+      const {
+        data: notificationData,
+        error: notificationError,
+      } = await supabase.rpc('create_notification', {
+        target_user_id: post.user_id,
+        notification_type: 'like',
+        notification_content: `${profile.full_name || 'Someone'} liked your post`,
+        notification_related_id: post.id,
+      });
+
+      console.log('NOTIFICATION RESULT:', notificationData);
+      console.log('NOTIFICATION ERROR:', notificationError);
+
+      if (notificationError) {
+        console.error('NOTIFICATION ERROR:', notificationError);
+      }
+    } else {
+      console.log('NOTIFICATION SKIPPED: User liked their own post');
+    }
+  }
+
+  onChanged();
+};
   const loadComments = async () => {
     setLoadingComments(true);
     const { data } = await supabase
